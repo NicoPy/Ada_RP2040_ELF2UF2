@@ -2,6 +2,9 @@
 An ELF to UF2 implementation written in Ada for the RP2040 micro-controller.
 
 This tool converts RP2040 ELF files to UF2 format.  
+
+UF2 files are accepted by RP2040 micro_controllers in BOOTSEL mode for FLASH programming.
+
 This is not a universal tool. It is dedicated to the RP2040 micro_controller.  
 However, it can easily be hacked to be used for another target.  
 

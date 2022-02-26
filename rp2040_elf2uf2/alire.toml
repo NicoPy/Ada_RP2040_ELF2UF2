@@ -1,0 +1,9 @@
+name = "rp2040_elf2uf2"
+description = "RP2040 ELF to UF2 converter."
+version = "0.1.0"
+
+authors = ["Nicolas Pinault"]
+maintainers = ["Nicolas Pinault <314@drpi.fr>"]
+maintainers-logins = ["NicoPy"]
+
+executables = ["rp2040_elf2uf2"]
