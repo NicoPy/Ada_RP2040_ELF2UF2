@@ -35,7 +35,9 @@ package body elf2uf2 is
    XIP_SRAM_END          : constant := 16#15004000#;
    MAIN_RAM_BANKED_START : constant := 16#21000000#;
    MAIN_RAM_BANKED_END   : constant := 16#21040000#;
-
+   ROM_START             : constant := 16#00000000#;
+   ROM_END               : constant := 16#00004000#;
+   
    RP2040_Address_Ranges_Flash : aliased constant Address_Range_Array := 
       (
          (From => FLASH_START,           To => FLASH_END,           AR_Type => CONTENTS),
@@ -47,7 +49,7 @@ package body elf2uf2 is
       (
          (From => MAIN_RAM_START, To => MAIN_RAM_END, AR_Type => CONTENTS),
          (From => XIP_SRAM_START, To => XIP_SRAM_END, AR_Type => CONTENTS),
-         (From => 16#00000000#,   To => 16#00004000#, AR_Type => IGNORE)       -- for now we ignore the BootRom if present
+         (From => ROM_START,      To => ROM_END,      AR_Type => IGNORE)       -- for now we ignore the BootRom if present
       );
 
    --**********************************
