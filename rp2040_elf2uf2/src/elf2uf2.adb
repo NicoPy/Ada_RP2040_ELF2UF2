@@ -10,6 +10,7 @@ with Elf;
 with Uf2;
 with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Ordered_Maps;
+with Ada.Containers.Ordered_Sets;
 with Errors;
 
 
@@ -51,6 +52,9 @@ package body elf2uf2 is
          (From => XIP_SRAM_START, To => XIP_SRAM_END, AR_Type => CONTENTS),
          (From => ROM_START,      To => ROM_END,      AR_Type => IGNORE)       -- for now we ignore the BootRom if present
       );
+
+   --**********************************
+   FLASH_SECTOR_ERASE_SIZE : constant := 4096;
 
    --**********************************
    -- We require 256 (as this is the page size supported by the device)
@@ -111,10 +115,10 @@ package body elf2uf2 is
       Verbosity := Level;
    end Set_Verbosity;
 
-
    --**********************************
    function Run (In_File  : SIO.File_Type; 
-                 Out_File : in out SIO.File_Type) return Exit_Status is
+                 Out_File : in out SIO.File_Type;
+                 Fill_Holes_With_Zeros : Boolean := False) return Exit_Status is
       ElfHeader    : Elf.Elf32_Header;
       Ram_Style    : Boolean := False;
       Valid_Ranges : Address_Range_Array_Access;
@@ -221,6 +225,56 @@ package body elf2uf2 is
                end;
             end if;
          end;
+      
+      else
+         -- Fill in empty dummy uf2 pages to align the binary to flash sectors (except for the last sector which we don't
+         -- need to pad, and choose not to to avoid making all SDK UF2s bigger)
+         -- That workaround is required because the bootrom uses the block number for erase sector calculations:
+         -- https://github.com/raspberrypi/pico-bootrom/blob/c09c7f08550e8a36fc38dc74f8873b9576de99eb/bootrom/virtual_disk.c#L205
+
+         if Fill_Holes_With_Zeros then
+            if Verbosity >= 1 then
+               Put_Line ("--- Fill Holes With Zeros ---");
+            end if;
+
+            declare
+               package Unsigned_32_Sets is new Ada.Containers.Ordered_Sets (Element_Type => Unsigned_32);
+               use Unsigned_32_Sets;
+
+               Touched_Sectors : Set;
+               Set_Cursor : Cursor;
+               Inserted   : Boolean;
+               Sector     : Unsigned_32;
+               Page       : Unsigned_32;
+               Last_Page  : Unsigned_32;
+            begin
+               -- Add Sectors to the set
+               for Pages_Cursor in Pages.Iterate loop
+                  Sector := Unsigned_32(Page_Map.Key(Pages_Cursor)) / FLASH_SECTOR_ERASE_SIZE;
+                  Touched_Sectors.Insert (Sector, Set_Cursor, Inserted);
+               end loop;
+
+               Last_Page := Pages.Last_Key;
+               for Sector of Touched_Sectors loop
+                  Page := Sector * FLASH_SECTOR_ERASE_SIZE;
+                  while Page < (Sector + 1) * FLASH_SECTOR_ERASE_SIZE loop
+                     if Page < Last_Page then
+                        if not Pages.Contains (Page) then
+                           if Verbosity = 2 then
+                              Put_Line ("Add Page at " & Hex(Page));
+                           end if;
+                           Pages.Include (Page, Fragment_Vector.Empty_Vector);
+                        end if;
+                     end if;
+                     Page := Page + PAGE_SIZE;
+                  end loop;
+               end loop;
+            end;
+            
+            if Verbosity = 2 then
+               Put_Line ("-----------------------------");
+            end if;
+         end if;
       end if;
 
       -- Write output file content
@@ -248,9 +302,14 @@ package body elf2uf2 is
             Block.Block_No    := Page_Num;
             Page_Num := Page_Num + 1;
             if Verbosity = 2 then
-               Put_Line ("Page " & Unsigned_32'Image(Block.Block_No) & " / " & 
-                                   Unsigned_32'Image(Block.Num_Blocks) & " " &
-                                   Hex (Block.Target_Addr));
+               Put ("Page " & Unsigned_32'Image(Block.Block_No) & " / " & 
+                              Unsigned_32'Image(Block.Num_Blocks) & " " &
+                              Hex (Block.Target_Addr));
+               if Page_Map.Element(Cursor).Is_Empty then
+                  Put_Line (" (padding)");
+               else
+                  New_Line;
+               end if;
             end if;
             Block.Data := (others=>0);
  

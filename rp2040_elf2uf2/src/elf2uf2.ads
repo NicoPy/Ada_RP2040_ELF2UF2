@@ -17,7 +17,8 @@ package elf2uf2 is
    procedure Set_Verbosity (Level : Verbosity_Level);
 
    function Run (In_File  : SIO.File_Type;
-                 Out_File : in out SIO.File_Type) return Exit_Status;
+                 Out_File : in out SIO.File_Type;
+                 Fill_Holes_With_Zeros : Boolean := False) return Exit_Status;
 
 private
 

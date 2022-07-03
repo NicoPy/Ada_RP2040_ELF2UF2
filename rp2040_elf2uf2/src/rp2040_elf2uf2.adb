@@ -81,7 +81,9 @@ begin
       declare
          Ret_Code : Exit_Status;
       begin
-         Ret_Code := elf2uf2.Run(In_File, Out_File);
+         Ret_Code := elf2uf2.Run(In_File  => In_File, 
+                                 Out_File => Out_File, 
+                                 Fill_Holes_With_Zeros => True);
          SIO.Close(In_File);
          SIO.Close(Out_File);
          if Ret_Code /= Errors.NO_ERROR then
