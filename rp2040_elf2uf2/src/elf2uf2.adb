@@ -224,6 +224,10 @@ package body elf2uf2 is
       end if;
 
       -- Write output file content
+      if Verbosity >= 1 then
+         Put_Line ("Writing file...");
+      end if;
+
       declare
          Block : Uf2.uf2_block;
          Page_Num : Unsigned_32 := 0;
@@ -263,7 +267,9 @@ package body elf2uf2 is
             return Errors.Fail_Write_Error;
       end;
 
-      --Put_Line("OK");
+      if Verbosity >= 1 then
+         Put_Line ("Done.");
+      end if;
       return Errors.NO_ERROR;
 
    end Run;
